@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>市区町村別建築統計マップ</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet.draw CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    
+    <!-- カスタム CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- ヘッダー -->
+        <header>
+            <h1>市区町村別建築統計マップ</h1>
+            <button id="sidebar-toggle-btn" class="sidebar-toggle" title="サイドバーを開く/閉じる">
+                <span class="toggle-icon">☰</span>
+            </button>
+        </header>
+        
+        <!-- メインコンテンツエリア -->
+        <div id="main-container">
+            <!-- サイドバー -->
+            <aside id="sidebar">
+                <!-- リサイザー -->
+                <div id="sidebar-resizer"></div>
+                
+                <!-- コントロールパネル -->
+                <div id="control-panel">
+            <div class="control-section" data-section="stats">
+                <div class="section-header">
+                    <h3>統計データ</h3>
+                    <button class="collapse-btn" aria-label="折りたたみ切替">▼</button>
+                </div>
+                <div class="collapsible-content">
+                    <div class="control-group">
+                        <input type="checkbox" id="show-stats-layer-checkbox" checked />
+                        <label for="show-stats-layer-checkbox">統計レイヤーを表示</label>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="year-select">年:</label>
+                        <select id="year-select">
+                            <option value="2025">2025年</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="month-select">月:</label>
+                        <select id="month-select">
+                            <option value="9">9月</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="indicator-select">指標:</label>
+                        <select id="indicator-select">
+                            <option value="buildingCount">着工件数（推計）（棟）</option>
+                            <option value="floorAreaTotal">全建物床面積（㎡）</option>
+                            <option value="estimatedAmount">見込み工事額（円）</option>
+                        </select>
+                    </div>
+                    
+                    <button id="update-btn">更新</button>
+                </div>
+            </div>
+            
+            <div class="control-section" data-section="construction">
+                <div class="section-header">
+                    <h3>建築計画データ</h3>
+                    <button class="collapse-btn" aria-label="折りたたみ切替">▼</button>
+                </div>
+                <div class="collapsible-content">
+                    <div class="control-group">
+                        <label for="start-month-from">着工年月（開始）:</label>
+                        <select id="start-month-from">
+                            <option value="">指定なし</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="start-month-to">着工年月（終了）:</label>
+                        <select id="start-month-to">
+                            <option value="">指定なし</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="completion-month-from">完成年月（開始）:</label>
+                        <select id="completion-month-from">
+                            <option value="">指定なし</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="completion-month-to">完成年月（終了）:</label>
+                        <select id="completion-month-to">
+                            <option value="">指定なし</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <input type="checkbox" id="show-construction-checkbox" />
+                        <label for="show-construction-checkbox">建築計画を表示</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-section" data-section="custom-points">
+                <div class="section-header">
+                    <h3>任意ポイント登録</h3>
+                    <button class="collapse-btn" aria-label="折りたたみ切替">▼</button>
+                </div>
+                <div class="collapsible-content">
+                    <div class="control-group">
+                        <label for="custom-point-address">住所:</label>
+                        <input type="text" id="custom-point-address" placeholder="例: 東京都千代田区丸の内1-1-1" />
+                    </div>
+                    
+                    <div class="control-group" style="gap: 10px;">
+                        <button id="add-custom-point-btn">住所から追加</button>
+                        <button id="add-point-by-click-btn" class="primary-btn">地図クリックで追加</button>
+                    </div>
+                    
+                    <div class="control-group">
+                        <input type="checkbox" id="show-custom-points-checkbox" checked />
+                        <label for="show-custom-points-checkbox">登録ポイントを表示</label>
+                    </div>
+                    
+                    <div class="control-group" style="margin-top: 10px; gap: 10px;">
+                        <button id="export-csv-btn" class="secondary-btn">CSVエクスポート</button>
+                        <button id="import-csv-btn" class="secondary-btn">CSVインポート</button>
+                        <input type="file" id="csv-file-input" accept=".csv" style="display: none;" />
+                    </div>
+                </div>
+            </div>
+            
+            <!-- エリア分析 -->
+            <div class="control-section" data-section="area-analysis">
+                <div class="section-header">
+                    <h3>📊 エリア分析</h3>
+                    <button class="collapse-btn" aria-label="折りたたみ切替">▼</button>
+                </div>
+                <div class="collapsible-content">
+                    <div class="control-group">
+                        <label for="polygon-name">ポリゴン名:</label>
+                        <input type="text" id="polygon-name" placeholder="例: 駅周辺エリア" />
+                    </div>
+                    
+                    <div class="control-group">
+                        <button id="start-polygon-btn" class="primary-btn">🖊️ ポリゴン描画開始</button>
+                        <button id="save-polygon-btn" class="primary-btn" style="display: none;">💾 保存</button>
+                    </div>
+                    
+                    <div class="control-group">
+                        <input type="checkbox" id="highlight-in-polygon-checkbox" checked />
+                        <label for="highlight-in-polygon-checkbox">範囲内マーカー強調</label>
+                    </div>
+                    
+                    <!-- 分析結果表示エリア -->
+                    <div id="analysis-results" style="margin-top: 15px;">
+                        <div class="analysis-section">
+                            <h4>📈 基本情報</h4>
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <span class="stat-label">総件数</span>
+                                    <span class="stat-value" id="total-count">-</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">総延べ床面積</span>
+                                    <span class="stat-value" id="total-area">-</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">平均面積</span>
+                                    <span class="stat-value" id="avg-area">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="analysis-section">
+                            <h4>🏢 用途別内訳</h4>
+                            <div id="usage-breakdown">-</div>
+                        </div>
+                        
+                        <div class="analysis-section">
+                            <h4>🔨 工事種別</h4>
+                            <div id="construction-type-breakdown">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 登録済みポイント一覧 -->
+        <div id="custom-points-list" class="collapsible-panel" data-section="points-list">
+            <div class="section-header">
+                <h4>登録済みポイント <span id="custom-points-count">0</span>件</h4>
+                <button class="collapse-btn" aria-label="折りたたみ切替">▼</button>
+            </div>
+            <div class="collapsible-content">
+                <div id="custom-points-items"></div>
+            </div>
+        </div>
+        
+        <!-- 登録済みポリゴン一覧 -->
+        <div id="saved-polygons-list" class="collapsible-panel" data-section="polygons-list">
+            <div class="section-header">
+                <h4>保存済みポリゴン <span id="saved-polygons-count">0</span>件</h4>
+                <button class="collapse-btn" aria-label="折りたたみ切替">▼</button>
+            </div>
+            <div class="collapsible-content">
+                <div id="saved-polygons-items"></div>
+            </div>
+        </div>
+        
+        <!-- ポイント属性編集モーダル -->
+        <div id="point-edit-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">ポイント属性編集</h3>
+                    <button class="modal-close" id="modal-close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit-point-name">ポイント名 <span class="required">*</span></label>
+                        <input type="text" id="edit-point-name" placeholder="例: 本社" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-point-address">住所 <span class="required">*</span></label>
+                        <input type="text" id="edit-point-address" placeholder="例: 東京都千代田区丸の内1-1-1" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-point-category">カテゴリ</label>
+                        <select id="edit-point-category">
+                            <option value="">選択してください</option>
+                            <option value="営業所">営業所</option>
+                            <option value="営業先">営業先</option>
+                            <option value="受注建物">受注建物</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-sales-person">営業担当者名</label>
+                        <input type="text" id="edit-sales-person" placeholder="例: 山田太郎" />
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-craftsman">担当職人名</label>
+                        <input type="text" id="edit-craftsman" placeholder="例: 佐藤次郎" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" id="modal-cancel-btn">キャンセル</button>
+                    <button class="btn-primary" id="modal-save-btn">保存</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ポリゴン名編集モーダル -->
+        <div id="polygon-edit-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>ポリゴン名編集</h3>
+                    <button class="modal-close" id="polygon-modal-close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit-polygon-name">ポリゴン名 <span class="required">*</span></label>
+                        <input type="text" id="edit-polygon-name" placeholder="例: 駅周辺エリア" lang="ja" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" id="polygon-modal-cancel-btn">キャンセル</button>
+                    <button class="btn-primary" id="polygon-modal-save-btn">保存</button>
+                </div>
+            </div>
+                </div>
+            </aside>
+            
+            <!-- 地図コンテナ -->
+            <main id="map-container">
+                <div id="map"></div>
+                
+                <!-- 凡例 -->
+                <div id="legend">
+                    <h4>凡例</h4>
+                    <div id="legend-content"></div>
+                </div>
+                
+                <!-- ローディング表示 -->
+                <div id="loading">データ読み込み中...</div>
+            </main>
+        </div>
+        
+        <!-- 削除: 凡例とローディングは地図コンテナ内に移動 -->
+        <!-- 凡例
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet.draw JS -->
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    
+    <!-- PapaParse (CSV parser) -->
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+    
+    <!-- カスタム JS -->
+    <script src="main.js"></script>
+</body>
+</html>
