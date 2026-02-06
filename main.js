@@ -2969,15 +2969,6 @@ function onPolygonCreated(e) {
     const analysisData = analyzeProjectsInPolygon(layer);
     displayAnalysisResults(analysisData);
     
-    // 範囲内マーカー強調（チェックボックスがONの場合）
-    const highlightCheckbox = document.getElementById('highlight-in-polygon-checkbox');
-    if (highlightCheckbox && highlightCheckbox.checked) {
-        highlightMarkersInPolygon();
-    } else {
-        // チェックボックスがOFFの場合は元に戻す
-        resetMarkerHighlight();
-    }
-    
     // 保存ボタンを表示
     const startBtn = document.getElementById('start-polygon-btn');
     const saveBtn = document.getElementById('save-polygon-btn');
@@ -2994,14 +2985,6 @@ function onPolygonEdited(e) {
     if (areaAnalysisState.currentPolygon) {
         const analysisData = analyzeProjectsInPolygon(areaAnalysisState.currentPolygon);
         displayAnalysisResults(analysisData);
-        
-        const highlightCheckbox = document.getElementById('highlight-in-polygon-checkbox');
-        if (highlightCheckbox && highlightCheckbox.checked) {
-            highlightMarkersInPolygon();
-        } else {
-            // チェックボックスがOFFの場合は元に戻す
-            resetMarkerHighlight();
-        }
     }
 }
 
@@ -3026,39 +3009,6 @@ function onPolygonDeleted(e) {
 /**
  * 範囲内マーカーを強調表示
  */
-function highlightMarkersInPolygon() {
-    if (!constructionState.markers || constructionState.markers.length === 0) {
-        return;
-    }
-    
-    const projectsInside = new Set(areaAnalysisState.projectsInPolygon.map(p => p.件名));
-    
-    constructionState.markers.forEach(marker => {
-        const project = marker.project;
-        
-        // projectプロパティが存在しない場合はスキップ
-        if (!project) {
-            console.warn('マーカーにprojectプロパティがありません', marker);
-            return;
-        }
-        
-        if (projectsInside.has(project.件名)) {
-            // 範囲内: 緑色のマーカー
-            marker.setIcon(L.icon({
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
-            }));
-        } else {
-            // 範囲外: デフォルト（青）の半透明
-            marker.setOpacity(0.3);
-        }
-    });
-}
-
 /**
  * マーカー強調をリセット
  */
@@ -3129,7 +3079,6 @@ function setupAreaAnalysis() {
     // ボタンイベント
     const startBtn = document.getElementById('start-polygon-btn');
     const saveBtn = document.getElementById('save-polygon-btn');
-    const highlightCheckbox = document.getElementById('highlight-in-polygon-checkbox');
     
     let controlAdded = false; // コントロール追加フラグ
     
@@ -3170,16 +3119,6 @@ function setupAreaAnalysis() {
     
     if (saveBtn) {
         saveBtn.addEventListener('click', saveNewPolygon);
-    }
-    
-    if (highlightCheckbox) {
-        highlightCheckbox.addEventListener('change', (e) => {
-            if (e.target.checked && areaAnalysisState.currentPolygon) {
-                highlightMarkersInPolygon();
-            } else {
-                resetMarkerHighlight();
-            }
-        });
     }
 }
 
