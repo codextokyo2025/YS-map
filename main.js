@@ -2400,6 +2400,9 @@ function addPolygonToMap(polygonData) {
         const analysisData = analyzeProjectsInPolygon(polygon);
         displayAnalysisResults(analysisData);
         
+        // マーカー強調は行わない（保存済みポリゴンは常に通常表示）
+        resetMarkerHighlight();
+        
         console.log(`✓ ポリゴン「${polygonData.name}」をクリック - 集計を表示しました`);
         
         // イベントの伝播を止める（地図のクリックイベントが発火しないように）
@@ -2477,6 +2480,9 @@ function saveNewPolygon() {
     // UI更新
     updateSavedPolygonsList();
     nameInput.value = '';
+    
+    // マーカーを元に戻す（保存後は通常表示）
+    resetMarkerHighlight();
     
     // ボタンを戻す
     document.getElementById('save-polygon-btn').style.display = 'none';
@@ -2967,6 +2973,9 @@ function onPolygonCreated(e) {
     const highlightCheckbox = document.getElementById('highlight-in-polygon-checkbox');
     if (highlightCheckbox && highlightCheckbox.checked) {
         highlightMarkersInPolygon();
+    } else {
+        // チェックボックスがOFFの場合は元に戻す
+        resetMarkerHighlight();
     }
     
     // 保存ボタンを表示
@@ -2989,6 +2998,9 @@ function onPolygonEdited(e) {
         const highlightCheckbox = document.getElementById('highlight-in-polygon-checkbox');
         if (highlightCheckbox && highlightCheckbox.checked) {
             highlightMarkersInPolygon();
+        } else {
+            // チェックボックスがOFFの場合は元に戻す
+            resetMarkerHighlight();
         }
     }
 }
