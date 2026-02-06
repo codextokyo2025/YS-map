@@ -2488,9 +2488,6 @@ function saveNewPolygon() {
     document.getElementById('save-polygon-btn').style.display = 'none';
     document.getElementById('start-polygon-btn').style.display = 'inline-block';
     
-    // 分析結果を非表示
-    document.getElementById('analysis-results').style.display = 'none';
-    
     alert(`ポリゴン「${name}」を保存しました！`);
 }
 
