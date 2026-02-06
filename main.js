@@ -28,8 +28,8 @@ const CONFIG = {
     
     // データファイルパス
     DATA: {
-        MUNICIPALITY_STATS: 'data/municipality_stats.csv',
-        GEOJSON: 'data/municipalities_simplified.geojson'
+        MUNICIPALITY_STATS: 'data/stats.csv',
+        GEOJSON: 'data/municipalities.geojson'
     },
     
     // 色設定（5段階コロプレス）
@@ -672,7 +672,7 @@ async function loadConstructionData() {
     console.log('建築計画データ読み込み開始...');
     try {
         // 全件座標付きデータを使用（2025年1月～12月完全版）
-        const response = await fetch('data/建築計画データ_座標付き_完全版_20260119_145034.json');
+        const response = await fetch('data/construction_projects.json');
         console.log('Response status:', response.status);
         
         if (!response.ok) {
@@ -680,10 +680,37 @@ async function loadConstructionData() {
         }
         
         constructionState.data = await response.json();
+        
+        // プロジェクトデータから完成年月・着工年月のリストを動的に生成
+        const completionMonths = new Set();
+        const startMonths = new Set();
+        
+        constructionState.data.projects.forEach(project => {
+            // 完成日から年月を抽出 (YYYY/MM/DD → YYYY/MM)
+            if (project.completion_date && project.completion_date !== 'nan') {
+                const match = project.completion_date.match(/(\d{4})\/(\d{2})/);
+                if (match) {
+                    project.完成年月 = `${match[1]}/${match[2]}`;
+                    completionMonths.add(project.完成年月);
+                }
+            }
+            // 着工日から年月を抽出 (YYYY/MM/DD → YYYY/MM)
+            if (project.start_date && project.start_date !== 'nan') {
+                const match = project.start_date.match(/(\d{4})\/(\d{2})/);
+                if (match) {
+                    project.着工年月 = `${match[1]}/${match[2]}`;
+                    startMonths.add(project.着工年月);
+                }
+            }
+        });
+        
+        constructionState.data.completion_months = Array.from(completionMonths).sort();
+        constructionState.data.start_months = Array.from(startMonths).sort();
+        
         console.log(`✓ 建築計画データ読み込み完了`);
         console.log(`  - プロジェクト件数: ${constructionState.data.projects.length}件`);
         console.log(`  - 完成年月の種類: ${constructionState.data.completion_months.length}ヶ月`);
-        console.log(`  - 着工年月の種類: ${constructionState.data.start_months ? constructionState.data.start_months.length : 0}ヶ月`);
+        console.log(`  - 着工年月の種類: ${constructionState.data.start_months.length}ヶ月`);
         console.log(`  - 完成年月リスト:`, constructionState.data.completion_months);
         console.log(`  - 着工年月リスト:`, constructionState.data.start_months);
         
@@ -740,6 +767,13 @@ function initCompletionMonthSelect() {
         }
     });
     
+    // デフォルト値を設定（最初の月～最後の月）
+    if (constructionState.data.completion_months.length > 0) {
+        selectFrom.value = constructionState.data.completion_months[0];
+        selectTo.value = constructionState.data.completion_months[constructionState.data.completion_months.length - 1];
+        console.log(`  - デフォルト期間設定: ${selectFrom.value} ～ ${selectTo.value}`);
+    }
+    
     console.log(`✓ 完成年月プルダウン初期化完了: ${selectFrom.options.length - 1}個のオプション追加`);
 }
 
@@ -791,6 +825,13 @@ function initStartMonthSelect() {
             console.log(`  - オプション追加: ${month}`);
         }
     });
+    
+    // デフォルト値を設定（最初の月～最後の月）
+    if (constructionState.data.start_months.length > 0) {
+        selectFrom.value = constructionState.data.start_months[0];
+        selectTo.value = constructionState.data.start_months[constructionState.data.start_months.length - 1];
+        console.log(`  - デフォルト期間設定: ${selectFrom.value} ～ ${selectTo.value}`);
+    }
     
     console.log(`✓ 着工年月プルダウン初期化完了: ${selectFrom.options.length - 1}個のオプション追加`);
 }
@@ -876,7 +917,7 @@ function showConstructionMarkers(completionMonthFrom, completionMonthTo, startMo
         });
         
         // マーカー作成
-        const marker = L.marker([project.緯度, project.経度], { icon: icon });
+        const marker = L.marker([project.latitude, project.longitude], { icon: icon });
         
         // プロジェクトデータを保存
         marker.project = project;
@@ -884,18 +925,18 @@ function showConstructionMarkers(completionMonthFrom, completionMonthTo, startMo
         // ポップアップ内容
         const popupContent = `
             <div class="construction-popup">
-                <h3>${project.件名}</h3>
+                <h3>${project.name}</h3>
                 <table>
-                    <tr><th>住所</th><td>${project.住居表示 || project.地名地番 || '-'}</td></tr>
-                    <tr><th>用途</th><td>${project.主要用途 || '-'}</td></tr>
-                    <tr><th>工事種別</th><td>${project.工事種別 || '-'}</td></tr>
-                    <tr><th>地上階</th><td>${project.地上 || '-'}</td></tr>
-                    <tr><th>延床面積</th><td>${project.延床面積 || '-'}</td></tr>
-                    <tr><th>建築主</th><td>${project.建築主 || '-'}</td></tr>
-                    <tr><th>設計者</th><td>${project.設計者 || '-'}</td></tr>
-                    <tr><th>施工者</th><td>${project.施工者 || '-'}</td></tr>
-                    <tr><th>着工日</th><td>${project.着工日 || '-'}</td></tr>
-                    <tr><th>完成日</th><td>${project.完成日 || '-'}</td></tr>
+                    <tr><th>住所</th><td>${project.address || '-'}</td></tr>
+                    <tr><th>用途</th><td>${project.usage || '-'}</td></tr>
+                    <tr><th>工事種別</th><td>${project.structure || '-'}</td></tr>
+                    <tr><th>地上階</th><td>${project.floors || '-'}</td></tr>
+                    <tr><th>延床面積</th><td>${project.area || '-'}</td></tr>
+                    <tr><th>建築主</th><td>${project.owner || '-'}</td></tr>
+                    <tr><th>設計者</th><td>${project.designer || '-'}</td></tr>
+                    <tr><th>施工者</th><td>${project.constructor || '-'}</td></tr>
+                    <tr><th>着工日</th><td>${project.start_date || '-'}</td></tr>
+                    <tr><th>完成日</th><td>${project.completion_date || '-'}</td></tr>
                 </table>
             </div>
         `;
