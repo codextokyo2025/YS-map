@@ -686,6 +686,19 @@ async function loadConstructionData() {
         const startMonths = new Set();
         
         constructionState.data.projects.forEach(project => {
+            // 緯度・経度（エリア分析用）
+            if (project.latitude !== undefined) project.緯度 = project.latitude;
+            if (project.longitude !== undefined) project.経度 = project.longitude;
+            
+            // 延床面積（エリア分析用）
+            if (project.area) project.延床面積 = project.area;
+            
+            // 主要用途（エリア分析用）
+            if (project.usage) project.主要用途 = project.usage;
+            
+            // 工事種別（エリア分析用）
+            if (project.structure) project.工事種別 = project.structure;
+            
             // 完成日から年月を抽出 (YYYY/MM/DD → YYYY/MM)
             if (project.completion_date && project.completion_date !== 'nan') {
                 const match = project.completion_date.match(/(\d{4})\/(\d{2})/);
