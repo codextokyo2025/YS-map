@@ -29,7 +29,7 @@ const CONFIG = {
     // データファイルパス
     DATA: {
         MUNICIPALITY_STATS: 'data/stats.csv',
-        GEOJSON: 'data/municipalities.geojson'
+        GEOJSON: 'data/municipalities_light.geojson'  // 軽量版（17MB→2.4MB）
     },
     
     // 色設定（5段階コロプレス）
